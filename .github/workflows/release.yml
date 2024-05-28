@@ -1,0 +1,58 @@
+name: Go
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Build
+        run: |
+          go build -o goclone
+          chmod a+x ./goclone
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: goclone
+          path: ./goclone
+
+  release:
+    name: Create and upload release
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Info
+        run: |
+          echo ${{ github.ref }}
+          ls -al
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            goclone
+          draft: false
+          prerelease: false
